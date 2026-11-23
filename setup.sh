@@ -131,7 +131,7 @@ if [ "$INSTALL_AWS" -eq 1 ]; then
     fi
   else
     warn "AWS credentials not configured. To set them up:"
-    echo "  1. IAM -> Users -> Create user -> name: captcha-crack-dev"
+    echo "  1. IAM -> Users -> Create user -> name: squint-dev"
     echo "  2. Attach policies: AmazonBedrockReadOnly, AmazonRekognitionReadOnlyAccess"
     echo "  3. Security credentials -> Create access key -> CLI"
     echo "  4. Run: aws configure   (region us-east-1, output json)"
@@ -209,9 +209,9 @@ else
 fi
 echo
 echo "Try it:"
-echo "  captcha-crack solve data/sample_captchas/ --length 6"
-echo "  captcha-crack stages path/to/captcha.png"
-echo "  captcha-crack backends"
+echo "  squint solve data/sample_captchas/ --length 6"
+echo "  squint stages path/to/captcha.png"
+echo "  squint backends"
 echo
 echo "Optional backends (re-run this script with a flag):"
 echo "  bash setup.sh --tesseract    local OCR"

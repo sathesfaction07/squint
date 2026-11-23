@@ -1,8 +1,8 @@
-# CaptchaCrack — Technical Architecture
+# Squint — Technical Architecture
 
 ## Overview
 
-CaptchaCrack is a distorted-text recognition tool built for CAPTCHA images. It runs a five-stage OpenCV preprocessing pipeline (denoise → grayscale → threshold → line removal → deskew) to clean intentionally mangled input, then routes the image to whichever recognition backend is available — local template matching, Tesseract OCR, or cloud vision models (AWS Bedrock Claude, AWS Rekognition, Google Vertex Gemini). Returns ranked candidate readings rather than a single confident guess, enabling callers to retry alternatives without re-fetching.
+Squint is a distorted-text recognition tool built for CAPTCHA images. It runs a five-stage OpenCV preprocessing pipeline (denoise → grayscale → threshold → line removal → deskew) to clean intentionally mangled input, then routes the image to whichever recognition backend is available — local template matching, Tesseract OCR, or cloud vision models (AWS Bedrock Claude, AWS Rekognition, Google Vertex Gemini). Returns ranked candidate readings rather than a single confident guess, enabling callers to retry alternatives without re-fetching.
 
 **Design principle:** Ranked candidates with honest confidence, not one confident answer. When a character is ambiguous (second-best within 0.12 of best), the system expands confusable alternatives and returns them in confidence order.
 
@@ -12,7 +12,7 @@ CaptchaCrack is a distorted-text recognition tool built for CAPTCHA images. It r
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          CLI (captcha-crack)                              │
+│                          CLI (squint)                              │
 │                                                                         │
 │  ┌──────────────┐   ┌──────────────┐   ┌─────────────────────────┐    │
 │  │   solve      │   │   stages     │   │     backends            │    │
@@ -128,7 +128,7 @@ Three commands exposed via Click:
 | `stages` | Write every preprocessing stage to disk for debugging. Outputs `00-original.png` through `06-deskewed.png` plus one file per segmented character. |
 | `backends` | List which backends are usable in the current environment. Checks `is_available()` for each registered backend. |
 
-Entry point: `captcha-crack` console script defined in `pyproject.toml`.
+Entry point: `squint` console script defined in `pyproject.toml`.
 
 ### 2. Preprocessing (`src/captcha_crack/core/preprocess.py`)
 
@@ -240,7 +240,7 @@ Batch processing writes all results regardless of individual failures. Failed im
 ## Data Flow
 
 ```
-1. User runs: captcha-crack solve captcha.png --backend claude --fallback tesseract --length 6
+1. User runs: squint solve captcha.png --backend claude --fallback tesseract --length 6
 2. CLI parses args, builds Settings(backend="claude", fallback_backends="tesseract", expected_length=6)
 3. Pipeline instantiates. collect_images(target) returns [captcha.png]
 4. Pipeline.solve_file() loads image with cv2.imread()
@@ -341,7 +341,7 @@ Vision language models are weighted 2x local backends. This is a judgement call,
 Claude Vision reads these images at 95–98% accuracy out of the box. Template matching manages 70–80% on a good day. By accuracy alone, the local path has no reason to exist. It stays for three reasons (ADR-002):
 
 1. **Zero cost** — A batch of 10,000 images costs nothing locally and real money through a VLM.
-2. **Debuggability** — `captcha-crack stages` writes every intermediate image. When a new CAPTCHA style fails, you see which stage is destroying the characters. A VLM gives you a wrong answer and no explanation.
+2. **Debuggability** — `squint stages` writes every intermediate image. When a new CAPTCHA style fails, you see which stage is destroying the characters. A VLM gives you a wrong answer and no explanation.
 3. **Offline operation** — Works in air-gapped environments and inside networks with no outbound access.
 
 The local CV path is the default. Cloud backends are opt-in via `--backend`, `--fallback`, or `--hybrid`.
@@ -352,7 +352,7 @@ A concrete observed run: a synthetic 6-character CAPTCHA (`K7M3P9`) rendered wit
 
 That is the design working, not failing. Three things went right even though the answer was wrong: the confidence was honestly low rather than inflated, the near-identical alternative scores correctly signalled that the matcher was guessing between equally poor options, and the sub-floor score is exactly the condition that makes a fallback chain escalate to a vision model. A single-string API would have returned `HHKQ6O` with no indication anything was wrong.
 
-It also exposes the real weak link: segmentation, not recognition. No template library can recover from a 14-way split of a 6-character image. This is why `captcha-crack stages` exists — it writes each intermediate image so you can see the over-split rather than guessing at it.
+It also exposes the real weak link: segmentation, not recognition. No template library can recover from a 14-way split of a 6-character image. This is why `squint stages` exists — it writes each intermediate image so you can see the over-split rather than guessing at it.
 
 When segmentation splits a character count that does not match `expected_length`, the confidence is accurate — the system knows the split is questionable. The alternative would be to return a reading at 0.85 confidence that is almost certainly malformed.
 
@@ -422,23 +422,23 @@ bash setup.sh --google     # Vertex Gemini
 bash setup.sh --all        # Everything
 
 # Solve one image
-captcha-crack solve captcha.png --length 6
+squint solve captcha.png --length 6
 
 # Solve directory, write CSV
-captcha-crack solve ./captchas/ --length 6 --format csv --output results.csv
+squint solve ./captchas/ --length 6 --format csv --output results.csv
 
 # Fallback chain: template first, Claude if unsure
-captcha-crack solve captcha.png --backend template --fallback claude --length 6
+squint solve captcha.png --backend template --fallback claude --length 6
 
 # Hybrid: run all available, merge by weight
-captcha-crack solve captcha.png --hybrid --fallback tesseract,claude,gemini --length 6
+squint solve captcha.png --hybrid --fallback tesseract,claude,gemini --length 6
 
 # Debug preprocessing stages
-captcha-crack stages captcha.png --output-dir debug/
+squint stages captcha.png --output-dir debug/
 # Writes 00-original.png through 06-deskewed.png plus char-00.png...char-N.png
 
 # Check available backends
-captcha-crack backends
+squint backends
 # Output example:
 # template       unavailable  (no templates loaded)
 # tesseract      ready

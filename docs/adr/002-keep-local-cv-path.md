@@ -22,14 +22,14 @@ Keep both. The local pipeline is the default backend; cloud backends are opt-in 
 
 - Zero marginal cost. A batch of 10,000 images costs nothing locally and real money through a VLM
 - Works offline and inside networks with no outbound access
-- Debuggable. `captcha-crack stages` writes every intermediate image to disk. When a new CAPTCHA style fails, you can see whether line removal ate the character strokes or the threshold washed them out. A VLM gives you a wrong answer and no explanation
+- Debuggable. `squint stages` writes every intermediate image to disk. When a new CAPTCHA style fails, you can see whether line removal ate the character strokes or the threshold washed them out. A VLM gives you a wrong answer and no explanation
 - The preprocessing is reusable by the cloud backends. Deskewing and line removal improve VLM accuracy too, so the work is not wasted even when the local recognizer is unused
 - Sensible privacy default — nothing leaves the machine unless the caller explicitly asks for a cloud backend
 
 **Bad**
 
 - Two code paths to maintain, and the `requires_segmentation` flag exists purely to route between them
-- The template backend needs a character template library that the repository does not ship. Out of the box it reports itself unavailable, which is confusing until you read `captcha-crack backends`
+- The template backend needs a character template library that the repository does not ship. Out of the box it reports itself unavailable, which is confusing until you read `squint backends`
 - More surface area: 400 extra lines, 60 extra tests
 
 **Neutral**

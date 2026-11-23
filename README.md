@@ -1,4 +1,4 @@
-# CaptchaCrack
+# Squint
 
 Reads distorted text from CAPTCHA images. Runs an OpenCV preprocessing pipeline locally, then hands the cleaned image to whichever recognition backend you pick — template matching, Tesseract, or a vision language model. Returns a ranked list of candidate readings rather than one confident guess.
 
@@ -96,7 +96,7 @@ Fallback chains and hybrid mode both live in `Pipeline`. A chain tries backends 
 ## Project Structure
 
 ```
-captcha-crack/
+squint/
 ├── src/captcha_crack/
 │   ├── cli.py                 solve / stages / backends commands
 │   ├── config.py              Pydantic settings, env-driven
@@ -143,31 +143,31 @@ bash setup.sh --all
 Solve one image:
 
 ```bash
-captcha-crack solve captcha.png --length 6
+squint solve captcha.png --length 6
 ```
 
 Solve a directory, write CSV:
 
 ```bash
-captcha-crack solve ./captchas/ --length 6 --format csv --output results.csv
+squint solve ./captchas/ --length 6 --format csv --output results.csv
 ```
 
 Local first, cloud only if local is unsure:
 
 ```bash
-captcha-crack solve captcha.png --backend template --fallback claude
+squint solve captcha.png --backend template --fallback claude
 ```
 
 Run everything and merge:
 
 ```bash
-captcha-crack solve captcha.png --hybrid --fallback tesseract,claude,gemini
+squint solve captcha.png --hybrid --fallback tesseract,claude,gemini
 ```
 
 Inspect every preprocessing stage:
 
 ```bash
-captcha-crack stages captcha.png --output-dir debug/
+squint stages captcha.png --output-dir debug/
 ```
 
 Writes `00-original.png` through `06-deskewed.png` plus one file per segmented character. This is the command you actually use when a CAPTCHA style is failing and you need to see which stage is eating the characters.
@@ -175,7 +175,7 @@ Writes `00-original.png` through `06-deskewed.png` plus one file per segmented c
 Check what is usable in the current environment:
 
 ```bash
-captcha-crack backends
+squint backends
 ```
 
 ### Python API
@@ -238,13 +238,13 @@ Every setting is an env var prefixed `CAPTCHA_CRACK_`, or set them in `.env`.
 
 **Ambiguity detection had to be about relative confidence, not absolute.** My first attempt flagged a character as ambiguous when its score fell below a threshold. That was wrong — a character can score low simply because the template set is poor, without there being any competing interpretation. What actually matters is whether the second-best match is close to the best. If `O` scores 0.61 and `0` scores 0.58, that is a real ambiguity. If `O` scores 0.61 and the runner-up is 0.20, it is just a weak match.
 
-**I kept the OpenCV path even though the VLMs are far better.** Claude Vision reads these images at 95%+ out of the box. Template matching manages 70–80% on a good day. The local path stays for three reasons: it costs nothing, it works with no network, and it makes the tool debuggable. When a new CAPTCHA style breaks everything, `captcha-crack stages` shows you exactly which preprocessing step is destroying the characters. You cannot debug a VLM that way.
+**I kept the OpenCV path even though the VLMs are far better.** Claude Vision reads these images at 95%+ out of the box. Template matching manages 70–80% on a good day. The local path stays for three reasons: it costs nothing, it works with no network, and it makes the tool debuggable. When a new CAPTCHA style breaks everything, `squint stages` shows you exactly which preprocessing step is destroying the characters. You cannot debug a VLM that way.
 
 **Line removal is the stage I got wrong most often.** The morphological approach removes anything longer than N pixels in a single direction. Set N too low and you delete the horizontal stroke of an `E`. Too high and the strike-through survives. I settled on 20 pixels because CAPTCHA characters are rarely wider than that, but it is exposed as a parameter because that assumption will not hold everywhere.
 
 **Splitting overlapping characters by pixel projection is a heuristic, and it shows.** When two characters touch, the column where they touch usually has fewer dark pixels than the columns through the character bodies. Cut there. It works often enough to be useful and fails on `rn` versus `m` in a way I have not solved. When the split count does not match the expected length, the confidence is penalised so the caller knows to be suspicious.
 
-**Backends fail silently and return an empty list.** Every backend catches its own exceptions and returns `[]` rather than raising. In a batch of two thousand images you do not want the run to die because one API call timed out. The pipeline treats an empty list as "this backend had nothing to say" and moves to the next one. The tradeoff is that a misconfigured backend looks identical to a backend that simply could not read the image — which is why `captcha-crack backends` exists as a separate command.
+**Backends fail silently and return an empty list.** Every backend catches its own exceptions and returns `[]` rather than raising. In a batch of two thousand images you do not want the run to die because one API call timed out. The pipeline treats an empty list as "this backend had nothing to say" and moves to the next one. The tradeoff is that a misconfigured backend looks identical to a backend that simply could not read the image — which is why `squint backends` exists as a separate command.
 
 **Hybrid mode weights the VLMs at 2× the local backends.** This is a judgement call, not a measurement. When Claude and template matching disagree, Claude is almost always right, so I did not want a simple average to let two weak local backends outvote one strong cloud one. If your local templates are excellent, lower the weight.
 
