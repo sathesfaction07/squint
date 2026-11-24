@@ -24,7 +24,7 @@ class TemplateBackend(RecognitionBackend):
     def _load_templates(self) -> None:
         manifest = self.template_dir / "manifest.json"
         if manifest.exists():
-            labels = json.loads(manifest.read_text())
+            labels = json.loads(manifest.read_text(encoding="utf-8"))
         else:
             labels = {p.stem: p.stem[0] for p in self.template_dir.glob("*.png")}
 

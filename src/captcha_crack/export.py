@@ -19,7 +19,7 @@ def collect_images(target: Path) -> list[Path]:
 def write_json(results: list[SolveResult], output: Path | None) -> str:
     payload = json.dumps([r.to_dict() for r in results], indent=2)
     if output:
-        output.write_text(payload)
+        output.write_text(payload, encoding="utf-8")
     return payload
 
 
@@ -74,7 +74,7 @@ def write_text(results: list[SolveResult], output: Path | None) -> str:
 
     payload = "\n".join(lines)
     if output:
-        output.write_text(payload + "\n")
+        output.write_text(payload + "\n", encoding="utf-8")
     return payload
 
 
