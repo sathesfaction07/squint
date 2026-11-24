@@ -10,7 +10,7 @@ Claude Vision and Gemini read distorted CAPTCHAs at 95–98% accuracy with no pr
 
 By accuracy alone the local path has no reason to exist. Deleting `preprocess.py`, `segment.py`, and `template.py` would remove roughly 400 lines and make the tool both simpler and more accurate.
 
-The portfolio guidance is also explicit that accuracy-sensitive projects should assume the worst possible input and should not assume AWS is available. That pushes in the opposite direction.
+The project guidance is also explicit that accuracy-sensitive projects should assume the worst possible input and should not assume AWS is available. That pushes in the opposite direction.
 
 ## Decision
 
